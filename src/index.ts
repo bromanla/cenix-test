@@ -5,7 +5,8 @@ import { saveToFile } from '#src/common/saveToFile.js';
 const [url, region] = process.argv.slice(2);
 
 const vprok = new VprokPuppeteer({});
-await vprok.mount(url);
+await vprok.launch();
+await vprok.setPage(url);
 await vprok.changeRegion(region);
 
 const { price, priceOld } = await vprok.getPrice();

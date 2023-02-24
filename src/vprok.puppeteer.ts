@@ -21,35 +21,62 @@ export class VprokPuppeteer implements Required<VprokPuppeteerConstructor> {
       : NaN;
   }
 
+  private compareText(a: string, b: string) {
+    return a.toLowerCase().trim() === b.toLowerCase().trim();
+  }
+
   public async changeRegion(targetRegion: string) {
     const buttonSelector = 'div.FirstHeader_region__lHCGj';
     const regionSelector = 'div.RegionModal_item___fYU6';
 
+    // loading buttons of selection of the region
     await this.page.waitForSelector(buttonSelector);
-    await this.page.click(buttonSelector);
+    const currentRegion = await this.page.$eval(
+      buttonSelector,
+      (el) => el?.textContent,
+    );
 
+    // if the target region is already selected
+    if (this.compareText(targetRegion, String(currentRegion))) {
+      return;
+    }
+
+    // waiting for a modal window loading
+    await this.page.click(buttonSelector);
     await this.page.waitForSelector(regionSelector);
     const elements = await this.page.$$(regionSelector);
 
+    // search for the target region
     for (const el of elements) {
       const text = await this.page.evaluate((el) => el?.textContent, el);
 
-      if (text === targetRegion) {
+      if (this.compareText(targetRegion, String(text))) {
         await this.page.evaluate((el) => el.click(), el);
+        await this.page.waitForNavigation();
         break;
       }
     }
-    await this.page.waitForNavigation();
   }
 
-  public async mount(targetUrl: string) {
-    this.browser = await puppeteer.launch();
+  /* Building a browser */
+  public async launch(headless = true) {
+    this.browser = await puppeteer.launch({
+      headless,
+      args: ['--disable-notifications'],
+    });
+  }
 
-    if (this.page) await this.page.close();
-    this.page = await this.browser.newPage();
+  public async setPage(targetUrl: string, clearCookies = false) {
+    // page creation on first launch
+    if (!this.page) this.page = await this.browser.newPage();
 
+    await this.page.setViewport({ width: this.width, height: this.height });
+
+    if (clearCookies) {
+      const client = await this.page.target().createCDPSession();
+      await client.send('Network.clearBrowserCookies');
+    }
     await this.page.goto(targetUrl);
-    await this.page.setViewport({ width: 1920, height: 1080 });
     await this.page.waitForNavigation();
   }
 
