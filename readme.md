@@ -1,4 +1,4 @@
-# Severstal
+# Cenix
 [Посмотреть тестовое задание](./docs/test-task.md)
 
 
